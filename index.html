@@ -19,6 +19,11 @@
         import init from '/pkg/package.js';
         init('/pkg/package_bg.wasm');
     </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/service-worker.js').catch(function () { });
+        }
+    </script>
 </body>
 
 </html>
