@@ -114,7 +114,7 @@ fn main_view(model: &Model) -> Node<Msg> {
 fn history_view(_: &Model, v: f64) -> Node<Msg> {
     let start = date().set_date(date().get_date() - date().get_day() - 1 - 0 * 7); // - 8.0 * 60.0 * 60.0 * 1000.0;
     let (sum, nodes) = (0..7)
-            .map(|i| (start + i as f64 * 1000.0 * 60.0 * 60.0 * 24.0 - v * 1000.0 * 60.0 * 60.0 * 24.0 * 7.0, i))
+            .map(|i| (start + i as f64 * 1000.0 * 60.0 * 60.0 * 24.0 - (v - 1.0) * 1000.0 * 60.0 * 60.0 * 24.0 * 7.0, i))
             .inspect(|x| log!(x))
             .map(|(e, i)| (to_date_str(e), i))
             .map(|(s, i)| (LocalStorage::get(&s).unwrap_or_default(), i))
