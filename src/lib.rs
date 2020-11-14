@@ -10,7 +10,7 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
     orders.subscribe(Msg::UrlChanged);
 
     Model {
-        current_topic: String::from("Ödev"),
+        current_topic: LocalStorage::get(TOPIC_KEY).unwrap_or_else(|_| String::from("Ödev")),
         solves: LocalStorage::get(&date_str()).unwrap_or_default(),
         route: Routes::from(url),
     }
@@ -55,10 +55,16 @@ fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
         Msg::UrlChanged(subs::UrlChanged(url)) => {
             model.route = Routes::from(url);
         }
-        Msg::NewTopic(t) => model.current_topic = t,
+        Msg::NewTopic(t) => {
+            model.current_topic = t;
+            LocalStorage::insert(TOPIC_KEY, &model.current_topic).unwrap();
+        }
         Msg::IncrementCount(i) => {
             let base = model.solves.entry(model.current_topic.clone()).or_insert(0);
             *base = (*base + i).max(0);
+            if *base == 0 {
+                model.solves.remove(&model.current_topic);
+            }
             LocalStorage::insert(&date_str(), &model.solves).unwrap();
         }
     }
@@ -200,3 +206,5 @@ const DAY_NAMES: [&str; 7] = [
     "Perşembe",
     "Cuma",
 ];
+
+const TOPIC_KEY: &str = "topic";
