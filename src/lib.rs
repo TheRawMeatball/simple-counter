@@ -101,8 +101,12 @@ fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
         }
         Msg::NewTest => {
             if let Some(x) = model.solves.get_mut(&model.current_topic) {
-                x.push(0);
-                LocalStorage::insert(&date_str(), &model.solves).unwrap();
+                if let Some(k) = x.last() {
+                    if *k > 0 {
+                        x.push(0);
+                        LocalStorage::insert(&date_str(), &model.solves).unwrap();
+                    }
+                } 
             }
         }
     }
