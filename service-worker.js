@@ -1,4 +1,4 @@
-const CACHE = 'precache-v1.3';
+const CACHE = 'precache-v1.4';
 
 const PRECACHE_URLS = [
     '/index.html',
@@ -36,17 +36,18 @@ self.addEventListener('activate', event => {
     );
 });
 
-self.addEventListener('fetch', event => {
-    console.log("request");
+self.addEventListener('fetch', async event => {
     if (event.request.url.startsWith(self.location.origin)) {
-        event.respondWith(
-            caches.match(event.request).then(cachedResponse => {
-                if (cachedResponse) {
-                    return cachedResponse;
-                } else {
-                    return caches.match('/');
-                }
-            })
-        );
+        let cachedResponse = await caches.match(event.request);
+        if (cachedResponse) {
+            event.respondWith(cachedResponse);
+        } else {
+            event.respondWith(caches.match('/'));
+        }
+        try {
+            let upToDate = await fetch(event.request);
+            let cache = await caches.open(CACHE);
+            cache.put(event.request, upToDate);
+        } catch (e) { }
     }
 });

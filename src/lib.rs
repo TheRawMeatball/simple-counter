@@ -18,7 +18,7 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
 
 struct Model {
     current_topic: String,
-    solves: HashMap<String, i32>,
+    solves: HashMap<String, Vec<i32>>,
     route: Routes,
 }
 
@@ -27,6 +27,7 @@ enum Msg {
     UrlChanged(subs::UrlChanged),
     NewTopic(String),
     IncrementCount(i32),
+    NewTest,
 }
 
 #[derive(Copy, Clone, PartialEq, EnumIter)]
@@ -58,12 +59,52 @@ fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
             model.current_topic = t;
             LocalStorage::insert(TOPIC_KEY, &model.current_topic).unwrap();
         }
-        Msg::IncrementCount(i) => {
-            let base = model.solves.entry(model.current_topic.clone()).or_insert(0);
-            *base = (*base + i).max(0);
-            if *base == 0 {
-                model.solves.remove(&model.current_topic);
+        Msg::IncrementCount(n) => {
+            let v = model
+                .solves
+                .entry(model.current_topic.clone())
+                .or_insert(vec![0]);
+
+            let base = if let Some(r) = v.last_mut() {
+                r
+            } else {
+                v.push(0);
+                v.last_mut().unwrap()
+            };
+
+            if n > 0 {
+                *base += n;
+            } else {
+                let mut decrement = -n;
+                for _ in 0..v.len(){
+                    let solves = v.last_mut().unwrap();
+                    let exchange = decrement.min(*solves);
+                    decrement -= exchange;
+                    if decrement == 0 {
+                        log!("asd");
+                        *solves -= exchange;
+                        if *solves == 0 {
+                            v.pop();
+                        }
+                        break;
+                    } else {
+                        v.pop();
+                    }
+                }
+
+                if v.len() == 0 {
+                    model.solves.remove(&model.current_topic);
+                }
             }
+
+            LocalStorage::insert(&date_str(), &model.solves).unwrap();
+        },
+        Msg::NewTest => {
+            model
+                .solves
+                .entry(model.current_topic.clone())
+                .or_insert(vec![0])
+                .push(0);
             LocalStorage::insert(&date_str(), &model.solves).unwrap();
         }
     }
@@ -84,8 +125,20 @@ fn main_view(model: &Model) -> Node<Msg> {
                         "Aktif konu: ",
                         &model.current_topic,
                         br!(),
-                        model.solves.get(&model.current_topic).unwrap_or(&0),
-                        " soru yapıldı."
+                        "Testte ",
+                        model
+                            .solves
+                            .get(&model.current_topic)
+                            .and_then(|v| v.last())
+                            .unwrap_or(&0),
+                        " soru yapıldı",
+                        br!(),
+                        model
+                            .solves
+                            .get(&model.current_topic)
+                            .map(|v| v.len().saturating_sub(1))
+                            .unwrap_or(0),
+                        " test yapıldı."
                     ]
                 ],
             ],
@@ -106,6 +159,12 @@ fn main_view(model: &Model) -> Node<Msg> {
                 style! { St::MarginLeft => rem(0.5) },
                 "Eksilt"
             ],
+            button![
+                C!["button"],
+                ev(Ev::Click, |_| Msg::NewTest),
+                style! { St::MarginLeft => rem(0.5) },
+                "Test Bitir"
+            ],
             a![
                 C!["button"],
                 attrs! { At::Href => "/history" },
@@ -117,15 +176,23 @@ fn main_view(model: &Model) -> Node<Msg> {
 }
 
 fn history_view(_: &Model, v: f64) -> Node<Msg> {
-    let start = date().set_date(date().get_date() - date().get_day() - 1 - 0 * 7); // - 8.0 * 60.0 * 60.0 * 1000.0;
+    let start = date().set_date(date().get_date() - date().get_day() - 1 - 0 * 7);
     let (sum, nodes) = (0..7)
-            .map(|i| (start + i as f64 * 1000.0 * 60.0 * 60.0 * 24.0 - (v - 1.0) * 1000.0 * 60.0 * 60.0 * 24.0 * 7.0, i))
+            .map(|i| (start + i as f64 * 1000.0 * 60.0 * 60.0 * 24.0 - (v) * 1000.0 * 60.0 * 60.0 * 24.0 * 7.0, i))
             .map(|(e, i)| (to_date_str(e), i))
             .map(|(s, i)| (LocalStorage::get(&s).unwrap_or_default(), i))
-            .map(|(x, i): (HashMap<String, i32>, _)| {
-                let (sum, nodes) = x.iter().fold((0, vec![]), |(sum, mut v), (topic, count)| {
-                    v.push(span![topic, ": ", count, br!()]);
-                    (sum + count, v)
+            .map(|(x, i): (HashMap<String, Vec<i32>>, _)| {
+                let (sum, nodes) = x.iter().fold((0, vec![]), |(sum, mut nodes), (topic, v)| {
+                    let (count, n) = v.iter().enumerate().fold((0, vec![]), |(sum, mut nodes), (i, count)| {
+                        nodes.push(if i + 1 != v.len() {
+                            format!("{} + ", count)
+                        } else {
+                            format!("{}", count)
+                        });
+                        (sum + count, nodes)
+                    });
+                    nodes.push(span![topic, ": ", n, " = ", sum + count, br!()]);
+                    (sum + count, nodes)
                 });
                 (sum, div![
                     C!["card"],
