@@ -1,4 +1,4 @@
-const CACHE = 'precache-v1.4';
+const CACHE = 'precache-v1.5';
 
 const PRECACHE_URLS = [
     '/index.html',
@@ -50,7 +50,8 @@ self.addEventListener('fetch', event => {
                 console.log("failed to send cached file");
                 console.log(e);
             }
-
+        })());
+        (async () => {
             try {
                 let upToDate = await fetch(event.request);
                 let cache = await caches.open(CACHE);
@@ -58,6 +59,6 @@ self.addEventListener('fetch', event => {
             } catch (e) {
                 console.log(`failed to update cache, ${e}`);
             }
-        })());
+        })();
     }
 });
