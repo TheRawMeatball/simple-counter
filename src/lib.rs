@@ -100,12 +100,10 @@ fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
             LocalStorage::insert(&date_str(), &model.solves).unwrap();
         }
         Msg::NewTest => {
-            model
-                .solves
-                .entry(model.current_topic.clone())
-                .or_insert(vec![0])
-                .push(0);
-            LocalStorage::insert(&date_str(), &model.solves).unwrap();
+            if let Some(x) = model.solves.get_mut(&model.current_topic) {
+                x.push(0);
+                LocalStorage::insert(&date_str(), &model.solves).unwrap();
+            }
         }
     }
 }
@@ -192,10 +190,10 @@ fn history_view(_: &Model, v: f64) -> Node<Msg> {
                         (sum + count, nodes)
                     });
                     nodes.push(span![
-                        topic, ": ", n, 
-                        IF!(v.len() > 1 => 
+                        topic, ": ", &n, 
+                        IF!(n.len() > 1 =>
                             format!(" = {}", count)
-                        ), 
+                        ),
                         br!()
                     ]);
                     (sum + count, nodes)
