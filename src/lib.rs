@@ -76,7 +76,7 @@ fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
                 *base += n;
             } else {
                 let mut decrement = -n;
-                for _ in 0..v.len(){
+                for _ in 0..v.len() {
                     let solves = v.last_mut().unwrap();
                     let exchange = decrement.min(*solves);
                     decrement -= exchange;
@@ -98,7 +98,7 @@ fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
             }
 
             LocalStorage::insert(&date_str(), &model.solves).unwrap();
-        },
+        }
         Msg::NewTest => {
             model
                 .solves
@@ -184,14 +184,20 @@ fn history_view(_: &Model, v: f64) -> Node<Msg> {
             .map(|(x, i): (HashMap<String, Vec<i32>>, _)| {
                 let (sum, nodes) = x.iter().fold((0, vec![]), |(sum, mut nodes), (topic, v)| {
                     let (count, n) = v.iter().enumerate().fold((0, vec![]), |(sum, mut nodes), (i, count)| {
-                        nodes.push(if i + 1 != v.len() {
-                            format!("{} + ", count)
-                        } else {
-                            format!("{}", count)
-                        });
+                        if i == 0 {
+                            nodes.push(format!("{}", count));
+                        } else if *count > 0 {
+                            nodes.push(format!(" + {}", count));
+                        }
                         (sum + count, nodes)
                     });
-                    nodes.push(span![topic, ": ", n, " = ", count, br!()]);
+                    nodes.push(span![
+                        topic, ": ", n, 
+                        IF!(v.len() > 1 => 
+                            format!(" = {}", count)
+                        ), 
+                        br!()
+                    ]);
                     (sum + count, nodes)
                 });
                 (sum, div![
