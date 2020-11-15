@@ -36,18 +36,28 @@ self.addEventListener('activate', event => {
     );
 });
 
-self.addEventListener('fetch', async event => {
+self.addEventListener('fetch', event => {
     if (event.request.url.startsWith(self.location.origin)) {
-        let cachedResponse = await caches.match(event.request);
-        if (cachedResponse) {
-            event.respondWith(cachedResponse);
-        } else {
-            event.respondWith(caches.match('/'));
-        }
-        try {
-            let upToDate = await fetch(event.request);
-            let cache = await caches.open(CACHE);
-            cache.put(event.request, upToDate);
-        } catch (e) { }
+        event.respondWith((async () => {
+            try {
+                let cachedResponse = await caches.match(event.request);
+                if (cachedResponse) {
+                    return cachedResponse;
+                } else {
+                    return await caches.match('/');
+                }
+            } catch (e) {
+                console.log("failed to send cached file");
+                console.log(e);
+            }
+
+            try {
+                let upToDate = await fetch(event.request);
+                let cache = await caches.open(CACHE);
+                cache.put(event.request, upToDate);
+            } catch (e) {
+                console.log(`failed to update cache, ${e}`);
+            }
+        })());
     }
 });
