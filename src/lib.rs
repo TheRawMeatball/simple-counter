@@ -191,7 +191,7 @@ fn history_view(_: &Model, v: f64) -> Node<Msg> {
                         });
                         (sum + count, nodes)
                     });
-                    nodes.push(span![topic, ": ", n, " = ", sum + count, br!()]);
+                    nodes.push(span![topic, ": ", n, " = ", count, br!()]);
                     (sum + count, nodes)
                 });
                 (sum, div![
