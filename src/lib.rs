@@ -1,7 +1,7 @@
 #![allow(clippy::wildcard_imports)]
 
-use seed::{prelude::*, *};
-use std::collections::HashMap;
+use seed::{app::CmdHandle, prelude::*, *};
+use std::{collections::HashMap, convert::identity};
 #[allow(unused_imports)]
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
@@ -13,6 +13,7 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
         current_topic: LocalStorage::get(TOPIC_KEY).unwrap_or_else(|_| String::from("Ödev")),
         solves: LocalStorage::get(&date_str()).unwrap_or_default(),
         route: Routes::from(url),
+        hold_timer: None,
     }
 }
 
@@ -20,6 +21,7 @@ struct Model {
     current_topic: String,
     solves: HashMap<String, Vec<i32>>,
     route: Routes,
+    hold_timer: Option<CmdHandle>,
 }
 
 #[derive(Clone)]
@@ -28,6 +30,9 @@ enum Msg {
     NewTopic(String),
     IncrementCount(i32),
     NewTest,
+    HoldStart,
+    HoldEnd,
+    HoldCancel,
 }
 
 #[derive(Copy, Clone, PartialEq, EnumIter)]
@@ -50,7 +55,7 @@ impl From<Url> for Routes {
     }
 }
 
-fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
+fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
         Msg::UrlChanged(subs::UrlChanged(url)) => {
             model.route = Routes::from(url);
@@ -81,7 +86,6 @@ fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
                     let exchange = decrement.min(*solves);
                     decrement -= exchange;
                     if decrement == 0 {
-                        log!("asd");
                         *solves -= exchange;
                         if *solves == 0 {
                             v.pop();
@@ -106,7 +110,32 @@ fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
                         x.push(0);
                         LocalStorage::insert(&date_str(), &model.solves).unwrap();
                     }
-                } 
+                }
+            }
+        }
+        Msg::HoldStart => {
+            model.hold_timer =
+                Some(orders.perform_cmd_with_handle(cmds::timeout(1000, || Msg::HoldEnd)));
+        }
+        Msg::HoldEnd => {
+            model.hold_timer = None;
+            web_sys::window()
+                .and_then(|w| w.prompt_with_message_and_default("", "0").ok())
+                .and_then(identity)
+                .and_then(|s| {
+                    str::parse(&s)
+                        .map_err(|_| {
+                            web_sys::window().map(|w| w.alert_with_message("Bir sayı yazın."));
+                        })
+                        .ok()
+                })
+                .map(Msg::IncrementCount)
+                .map(|m| orders.send_msg(m));
+        }
+        Msg::HoldCancel => {
+            if let Some(_) = model.hold_timer {
+                model.hold_timer = None;
+                orders.send_msg(Msg::IncrementCount(1));
             }
         }
     }
@@ -121,7 +150,8 @@ fn main_view(model: &Model) -> Node<Msg> {
                 C!["content"],
                 div![
                     C!["circle"],
-                    ev(Ev::Click, |_| Msg::IncrementCount(1)),
+                    ev(Ev::MouseUp, |_| Msg::HoldCancel),
+                    ev(Ev::MouseDown, |_| Msg::HoldStart),
                     div![
                         C!["button-inner"],
                         "Aktif konu: ",

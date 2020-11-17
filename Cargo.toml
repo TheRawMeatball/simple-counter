@@ -19,6 +19,7 @@ wasm-bindgen-test = "0.3.18"
 seed = "0.8.0"
 strum = "0.18.0"
 strum_macros = "0.18.0"
+gloo-timers = "0.2"
 
 [profile.release]
 lto = true

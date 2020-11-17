@@ -1,4 +1,4 @@
-const CACHE = 'precache-v1.5';
+const CACHE = 'precache-v1.6';
 
 const PRECACHE_URLS = [
     '/index.html',
