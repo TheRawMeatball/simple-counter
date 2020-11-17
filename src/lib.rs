@@ -114,10 +114,12 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             }
         }
         Msg::HoldStart => {
+            log!("start");
             model.hold_timer =
                 Some(orders.perform_cmd_with_handle(cmds::timeout(1000, || Msg::HoldEnd)));
         }
         Msg::HoldEnd => {
+            log!("end");
             model.hold_timer = None;
             web_sys::window()
                 .and_then(|w| w.prompt_with_message_and_default("", "0").ok())
@@ -134,6 +136,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         }
         Msg::HoldCancel => {
             if let Some(_) = model.hold_timer {
+                log!("cancel");
                 model.hold_timer = None;
                 orders.send_msg(Msg::IncrementCount(1));
             }
@@ -150,8 +153,12 @@ fn main_view(model: &Model) -> Node<Msg> {
                 C!["content"],
                 div![
                     C!["circle"],
-                    ev(Ev::MouseUp, |_| Msg::HoldCancel),
-                    ev(Ev::MouseDown, |_| Msg::HoldStart),
+                    ev(Ev::PointerUp, |_| Msg::HoldCancel),
+                    ev(Ev::PointerDown, |_| Msg::HoldStart),
+                    ev(Ev::ContextMenu, |e| {
+                        e.prevent_default();
+                        e.stop_propagation();
+                    }),
                     div![
                         C!["button-inner"],
                         "Aktif konu: ",
