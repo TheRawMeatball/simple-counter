@@ -215,7 +215,7 @@ fn main_view(model: &Model) -> Node<Msg> {
 }
 
 fn history_view(_: &Model, v: f64) -> Node<Msg> {
-    let start = date().set_date(date().get_date() - date().get_day() - 1 - 0 * 7);
+    let start = date().set_date(date().get_date() - ((date().get_day() + 1) % 7));
     let (sum, nodes) = (0..7)
             .map(|i| (start + i as f64 * 1000.0 * 60.0 * 60.0 * 24.0 - (v) * 1000.0 * 60.0 * 60.0 * 24.0 * 7.0, i))
             .map(|(e, i)| (to_date_str(e), i))
